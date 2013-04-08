@@ -27,6 +27,7 @@ int imread (char * imname, image * im) {
 		}
 	
 	im->is_indexed = 0;					// set the indexed field to 0 for start
+	im->max_val = im->min_val = 0;		// set min and max values to be 0
 	
 
 	FILE * fp;
@@ -130,6 +131,15 @@ int imread (char * imname, image * im) {
 			else {
 				im->data[i][j] = (float) foo;
 				}
+			/* modify the values of min and max pixel value if necessary. This will
+			slow down the image reading, but this metadata will be useful for other
+			functions */
+			if (im->data[i][j] > im->max_val) {
+				im->max_val = im->data[i][j];
+				}
+			else if (im->data[i][j] < im->min_val) {
+				im->min_val = im->data[i][j];
+				}
 			}
 		}
 	
@@ -174,3 +184,27 @@ int read_header(header * h, FILE * fp) {
 	}
 
 
+/* binarize: This function takes an image and a floating point threshold
+	value. It then converts the image to binary such that pixels having
+	value greater than or equal to the threshold will be 1 and those below
+	threshold will be 0. */
+
+void binarize(image * im,float t) {
+	int i,j;
+
+	if (t > im->max_val) {
+		printf("WARNING: Threshold for binarization is greater than maximum pixel value\n\
+		The image will be entirely white after the operations\n");
+		}
+	else if (t < im->min_val) {
+		printf("WARNING: Threshold for binarization is lesser than minimum pixel value\n\
+		The image will be entirely black after the operations\n");
+		}
+	
+
+	for (i=0; i < im->h.height; i++) {
+		for (j=0; j < im->h.width; j++) {
+			im->data[i][j] = im->data[i][j] >= t ? 1.0 : 0.0;
+			}
+		}
+	}

@@ -66,13 +66,16 @@ typedef struct {
 	colour palette elements. This pointer points to array of palette colours if
 	the image is indexed.
 	Whether the image is indexed is shown by field 'is_indexed' which is set to 1
-	if the image is indexed */
+	if the image is indexed 
+	fields min_val and max_val are minimum and maximum pixel value of the image data
+	*/
 
 typedef struct {
-	float ** data;
-	header h;
-	index_ele * c_index;
-	int is_indexed;
+	float ** data;				// pixel data of the image
+	header h;					// bmp header structure
+	index_ele * c_index;		// pointer to the colour palette
+	int is_indexed;				// 'is the image indexed?' flag
+	float max_val, min_val;		// minimum and maximum value of pixels
 	} image;
 
 
@@ -92,7 +95,12 @@ int imread(char *, image *);
 
 int read_header(header *, FILE *);
 
+/* binarize: This function takes an image and a floating point threshold
+	value. It then converts the image to binary such that pixels having
+	value greater than or equal to the threshold will be 1 and those below
+	threshold will be 0. */
 
+void binarize(image *,float);
 
 
 
