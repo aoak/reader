@@ -110,13 +110,13 @@ void binarize(image *,float);
 	it then calls an appropriate function to read the pixel data according to
 	the nature of the image */
 
-int read_pixels (image *im, FILE *fp);
+int read_pixels (image *, FILE *);
 
 /* read_grey_pixels: This function takes an image structure and a file pointer,
 	and reads the pixel data into the structure assuming that the image is NOT
 	indexed and is 8 bit encoded */
 
-int read_grey_pixels (image *im, FILE *fp);
+int read_grey_pixels (image *, FILE *);
 
 
 
@@ -134,7 +134,7 @@ int read_grey_pixels (image *im, FILE *fp);
 
 
 
-int read_rgb_pixels(image *im,FILE *fp);
+int read_rgb_pixels(image *,FILE *);
 
 
 
@@ -143,14 +143,14 @@ int read_rgb_pixels(image *im,FILE *fp);
 	pointer and then allocates and populates the colour palette. 
 	The file handle is assumed to point at the colour index */
 
-int read_colour_palette (image *im, FILE *fp);
+int read_colour_palette (image *, FILE *);
 
 
 /* allocate_data_array: This function allocates the memory for pixel data. It allocates
 	float data if the image is not an RGB (!24_bit && !indexed). Otherwise it
 	allocates the colour vectors for each pixel. */
 
-int allocate_data_array (image *im);
+int allocate_data_array (image *);
 
 
 /* colour_to_grey: This function takes an RGB image and converts it to grey scale.
@@ -165,7 +165,19 @@ int allocate_data_array (image *im);
 		  (lame greyscale image) then you probably want to convert it using the
 		  averaging method ('A')*/
 
-int colour_to_grey (image *im, char method);
+int colour_to_grey (image *, char );
+
+
+
+/* get_image_vector: This function takes an greyscale image and a pointer
+	to an array of floats. It then populates the array (vector) by rowvise
+	image pixel data.
+	NOTE: Assumes enough memory is allocated for the vector. Also assumes 
+	the vector to be a float vector */
+
+int get_image_vector (image *, float *);
+
+
 
 
 

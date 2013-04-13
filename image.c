@@ -448,6 +448,26 @@ float luminosity (colour c) {
 
 
 
+/* get_image_vector: This function takes an greyscale image and a pointer
+	to an array of floats. It then populates the array (vector) by rowvise
+	image pixel data.
+	NOTE: Assumes enough memory is allocated for the vector. Also assumes 
+	the vector to be a float vector */
+
+int get_image_vector (image *im, float *vect) {
+	
+	if (im->is_indexed != 0 || im->is_rgb != 0) {
+		printf("Greyscale image expected for conversion into a vector\n");
+		return 1;
+		}
+	
+	int i,j,ind = 0;
+	for (i=0; i < im->h.height; i++)
+		for (j=0; j < im->h.width; j++)
+			vect[ind++] = im->g_data[i][j];
+	
+	return 0;
+	}
 
 
 
