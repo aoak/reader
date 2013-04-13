@@ -119,7 +119,7 @@ int read_grey_pixels (image *im, FILE *fp) {
 	unsigned char temp;
 	/* calculate the paddin in the image rows. bitmaps are rounded to be multiples of
 	32 bits per row */
-	int pad = (4 - (im->h.width * bytes) % 4);
+	int pad = (4 - ((im->h.width * bytes) % 4)) % 4;
 	
 	if (bytes != 1) {
 		printf("Unsupported greyscale image with %d bit encoding\n",im->h.bits);
@@ -165,7 +165,7 @@ int read_rgb_pixels(image *im,FILE *fp) {
 	int bytes = im->h.bits/8;
 	/* calculate the paddin in the image rows. bitmaps are rounded to be multiples of
 	32 bits per row */
-	int pad = (4 - (im->h.width * bytes) % 4);
+	int pad = (4 - ((im->h.width * bytes) % 4)) % 4;
 	printf("Image is padded with %d bytes\n",pad);
 
 	/* Following procedure is to read the indexed data */
