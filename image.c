@@ -26,7 +26,7 @@ float averaging (colour c);
 int imread (char * imname, image * im) {
 
 	if (imname == NULL) {
-		printf("ERROR: image name not specified %p\n",imname);
+		fprintf(stderr,"ERROR: image name not specified %p\n",imname);
 		return 1;
 		}
 	
@@ -39,13 +39,13 @@ int imread (char * imname, image * im) {
 
 	fp = fopen(imname,"rb+");			// now open the image file
 	if (fp == NULL) {
-		printf("ERROR: Reading the image file failed\n");
+		fprintf(stderr,"ERROR: Reading the image file failed\n");
 		return 1;
 		}
 	
 	/* Now read the bmp file header into the bmp header structure */
 	if (read_header(&im->h, fp)) {
-		printf("ERROR: Reading the header failed\n");
+		fprintf(stderr,"ERROR: Reading the header failed\n");
 		fclose(fp);
 		return 1;
 		}
@@ -69,13 +69,13 @@ int imread (char * imname, image * im) {
 	int i,j;
 
 	if (allocate_data_array(im)) {
-		printf("ERROR: Error allocating data for image pixels\n");
+		fprintf(stderr,"ERROR: Error allocating data for image pixels\n");
 		fclose(fp);
 		return 1;
 		}
 	
 	if (read_pixels(im,fp)) {
-		printf("ERROR: Error reading pixel data\n");
+		fprintf(stderr,"ERROR: Error reading pixel data\n");
 		free(im->c_data);
 		free(im->g_data);
 		fclose(fp);
@@ -126,14 +126,14 @@ int read_grey_pixels (image *im, FILE *fp) {
 	int pad = (4 - ((im->h.width * bytes) % 4)) % 4;
 	
 	if (bytes != 1) {
-		printf("Unsupported greyscale image with %d bit encoding\n",im->h.bits);
+		fprintf(stderr,"Unsupported greyscale image with %d bit encoding\n",im->h.bits);
 		return 1;
 		}
 
 	/* Now we have the header, and the colour palette, so now we can read the pixel data.
 	Set the pointer appropriately using the header information and then start reading */
 	if (fseek(fp, im->h.offset, SEEK_SET) ) {
-		printf("ERROR: Could not locate image data\n");
+		fprintf(stderr,"ERROR: Could not locate image data\n");
 		}
 
 	for (i=im->h.height-1; i >= 0; i--) {
@@ -170,7 +170,7 @@ int read_rgb_pixels(image *im,FILE *fp) {
 	/* calculate the paddin in the image rows. bitmaps are rounded to be multiples of
 	32 bits per row */
 	int pad = (4 - ((im->h.width * bytes) % 4)) % 4;
-	printf("Image is padded with %d bytes\n",pad);
+	//	printf("Image is padded with %d bytes\n",pad);
 
 	/* Following procedure is to read the indexed data */
 	if (im->is_indexed == 1) {
@@ -181,7 +181,7 @@ int read_rgb_pixels(image *im,FILE *fp) {
 	/* Now we have the header, and the colour palette, so now we can read the pixel data.
 	Set the pointer appropriately using the header information and then start reading */
 	if (fseek(fp, im->h.offset, SEEK_SET) ) {
-		printf("ERROR: Could not locate image data\n");
+		fprintf(stderr,"ERROR: Could not locate image data\n");
 		}
 
 		for (i=im->h.height-1; i >= 0; i--) {
@@ -201,7 +201,7 @@ int read_rgb_pixels(image *im,FILE *fp) {
 	colour palette */
 		
 	if (fseek(fp, im->h.offset, SEEK_SET) ) {
-		printf("ERROR: Could not locate image data\n");
+		fprintf(stderr,"ERROR: Could not locate image data\n");
 		}
 
 		for (i=im->h.height-1; i >= 0; i--) {
@@ -237,7 +237,7 @@ int read_colour_palette (image *im, FILE *fp) {
 		/* clean up if we are not able to prepare the index. No point in continuing 
 		because we will probably return wrong pixel data */
 		fclose(fp);
-		printf("ERROR: Could not create colour index\n");
+		fprintf(stderr,"ERROR: Could not create colour index\n");
 		return 1;
 		}
 
@@ -272,7 +272,7 @@ int allocate_data_array (image *im) {
 		im->g_data = (float **) malloc (sizeof(float *) * im->h.height );
 
 	if (im->g_data == NULL && im->c_data == NULL) {
-		printf("ERROR: Could not allocate memory for the image data\n");
+		fprintf(stderr,"ERROR: Could not allocate memory for the image data\n");
 		return 1;
 		}
 
@@ -292,7 +292,7 @@ int allocate_data_array (image *im) {
 			}
 
 		if (flag == 1) {
-			printf("ERROR: Could not allocate memory for the image data row\n");
+			fprintf(stderr,"ERROR: Could not allocate memory for the image data row\n");
 			free(im->c_data);
 			free(im->g_data);
 			return 1;
@@ -348,7 +348,7 @@ int read_header(header * h, FILE * fp) {
 void binarize(image * im,float t) {
 	int i,j;
 	if (im->is_rgb == 1) {
-		printf("ERROR: Image binarization should be done on greyscale images.\n");
+		fprintf(stderr,"ERROR: Image binarization should be done on greyscale images.\n");
 		return;
 		}
 
@@ -457,7 +457,7 @@ float luminosity (colour c) {
 int get_image_vector (image *im, float *vect) {
 	
 	if (im->is_indexed != 0 || im->is_rgb != 0) {
-		printf("Greyscale image expected for conversion into a vector\n");
+		fprintf(stderr,"Greyscale image expected for conversion into a vector\n");
 		return 1;
 		}
 	
@@ -474,6 +474,27 @@ int get_image_vector (image *im, float *vect) {
 
 
 
+/* free_image: This function takes an image structure and deallocates all the 
+	memory in its arrays. */
+
+void free_image (image * im) {
+	
+	if (im->c_index)
+		free(im->c_index);				// free colour palette if any
+	
+	int i;
+	for (i=0; i < im->h.height; i++) {
+		if (im->is_indexed || im->is_rgb)
+			free(im->c_data[i]);
+		else
+			free(im->g_data[i]);
+		}
+	
+	im->is_indexed = -1;
+	im->is_rgb = -1;
+	im->h.height = 0;
+	im->h.width = 0;
+	}
 
 
 

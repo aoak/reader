@@ -179,6 +179,11 @@ int get_image_vector (image *, float *);
 
 
 
+/* free_image: This function takes an image structure and deallocates all the 
+478     memory in its arrays. */
+
+void free_image (image * );
+
 
 
 
