@@ -28,6 +28,7 @@ int imread (char * imname, image * im) {
 	
 	im->is_indexed = 0;					// set the indexed field to 0 for start
 	im->max_val = im->min_val = 0;		// set min and max values to be 0
+	im->is_rgb=0;						// set the rgb flag to 0 for now
 	
 
 	FILE * fp;
@@ -45,107 +46,258 @@ int imread (char * imname, image * im) {
 		return 1;
 		}
 
+	/* check if we have a colour palette. */
+	if  (im->h.num_c > 0) {
+		im->is_indexed = 1;
+		}
+
+	/* check if the image is rgb. If so, we will need to allocate the
+	data array as colour triplet for each pixel. */
+	if (im->h.bits == 24 || im->h.num_c > 0) {
+		im->is_rgb = 1;
+		}
 	
+	/* NOTE: if the image is indexed or if image is 24 bits, we allocate pixel
+	data as colour triplets. There is a possibility that the image may still be
+	greyscale, but then maybe it was stored in a wrong way. we can provide a function
+	converting from RGB to Greyscale */
+
 	int i,j;
 
-	/* allocate memory for pixel data. This is pointer to pointers */
-
-	im->data = (float **) malloc (sizeof(float *) * im->h.height );
-
-	if (im->data == NULL) {
-		printf("ERROR: Could not allocate memory for the image data\n");
+	if (allocate_data_array(im)) {
+		printf("ERROR: Error allocating data for image pixels\n");
+		fclose(fp);
+		return 1;
+		}
+	
+	if (read_pixels(im,fp)) {
+		printf("ERROR: Error reading pixel data\n");
+		free(im->c_data);
+		free(im->g_data);
 		fclose(fp);
 		return 1;
 		}
 
+	
+	/* done */
+	return 0;
+	}
 
-	for (i=0; i < im->h.height; i++ ) { 
-		/* Using calloc here to initialize the pixels to 0. just in case
-		if there is some problem with header and we find less number of 
-		pixel data than we should */
-		im->data[i] = (float *) calloc( im->h.width, sizeof(float) );
-		if (im->data[i] == NULL) {
-			printf("ERROR: Could not allocate memory for the image data row\n");
-			fclose(fp);
-			free(im->data);
-			return 1;
-			}
+
+
+
+
+
+/* read_pixels: This function takes an image structure and a file handle,
+	it then calls an appropriate function to read the pixel data according to
+	the nature of the image */
+
+int read_pixels (image *im, FILE *fp) {
+	/* Check if the image is RGB. If so, call appropriate function to read the 
+	RGB pixel data. Otherwise, call the function to read the greyscale data */
+
+	if (im->is_rgb) {
+		return read_rgb_pixels(im,fp);
 		}
-
-
-	// now check if this is index bmp. If so, we have to allocate and populate the index.
-	if (im->h.num_c) {
-		im->is_indexed = 1;				// set the flag indicating the image is indexed
-		unsigned char trash;			// this is to hold the junk in colour palette
-
-		/* allocate the memory for colour palette */
-		im->c_index = (index_ele *) malloc (sizeof(index_ele) * im->h.num_c);
-		if (im->c_index == NULL) {
-
-			/* clean up if we are not able to prepare the index. No point in continuing 
-			because we will probably return wrong pixel data */
-			fclose(fp);
-			for (i=0; i < im->h.height; i++ )
-				free(im->data[i]);
-			free(im->data);
-			printf("ERROR: Could not create colour index\n");
-			}
-
-
-		/* Each colour is represented by 4 bytes, each representing blue, green and red
-		in that order followed by a 0x00. */
-		for (i=0; i < im->h.num_c; i++) {
-			fread(&im->c_index[i].b, 1, 1, fp);
-			fread(&im->c_index[i].g, 1, 1, fp);
-			fread(&im->c_index[i].r, 1, 1, fp);
-			fread(&trash, 1, 1, fp);
-//	dbg		printf("index %3d = %3d %3d %3d %3d\n",i,im->c_index[i].b,im->c_index[i].g,im->c_index[i].r,trash);
-			}
+	else {
+		return read_grey_pixels(im,fp);
 		}
+	}
 
+
+
+
+/* read_grey_pixels: This function takes an image structure and a file pointer,
+	and reads the pixel data into the structure assuming that the image is NOT
+	indexed and is 8 bit encoded */
+
+int read_grey_pixels (image *im, FILE *fp) {
+
+	
+	int i,j;
+	int bytes = im->h.bits/8;		// should be 1
+	unsigned char temp;
+	/* calculate the paddin in the image rows. bitmaps are rounded to be multiples of
+	32 bits per row */
+	int pad = (4 - (im->h.width * bytes) % 4);
+	
+	if (bytes != 1) {
+		printf("Unsupported greyscale image with %d bit encoding\n",im->h.bits);
+		return 1;
+		}
 
 	/* Now we have the header, and the colour palette, so now we can read the pixel data.
 	Set the pointer appropriately using the header information and then start reading */
 	if (fseek(fp, im->h.offset, SEEK_SET) ) {
 		printf("ERROR: Could not locate image data\n");
+		}
+
+	for (i=im->h.height-1; i >= 0; i--) {
+		for (j=0; j < im->h.width; j++) {
+			fread(&temp, 1, bytes, fp);
+			im->g_data[i][j] = (float) temp;
+			}
+		fread(&temp, 1, pad, fp);
+		}
+	}
+
+
+
+/* read_rgb_pixels: This function is to read rgb pixel data from the image. It 
+	accepts the file handle and the image structure and reads the rgb pixel
+	data
+
+	NOTE: We can handle 8 bit indexed image which can be greyscale (RGB having
+	same value) or coloured (RGB having different values in the palette). OR
+	we can handle 24 bit RGB image where each byte is R, G, and B.
+
+	WE DO NOT HANDLE 24 BIT INDEXED BMP IMAGES. I just think that should not happen.
+	there is no sense in having a colour palette if you have 24 bit encoding. This
+	kind of image will be simply read as an 24 but image ignoring the palette */
+
+
+
+int read_rgb_pixels(image *im,FILE *fp) {
+	
+	/* The reading style will change depending on whether the image is indexed
+	of whether it is 24 bit RGB */
+	int i,j;
+	int bytes = im->h.bits/8;
+	/* calculate the paddin in the image rows. bitmaps are rounded to be multiples of
+	32 bits per row */
+	int pad = (4 - (im->h.width * bytes) % 4);
+	printf("Image is padded with %d bytes\n",pad);
+
+	/* Following procedure is to read the indexed data */
+	if (im->is_indexed == 1) {
+		if (read_colour_palette(im,fp)) {
+			return 1;
+			}
+
+	/* Now we have the header, and the colour palette, so now we can read the pixel data.
+	Set the pointer appropriately using the header information and then start reading */
+	if (fseek(fp, im->h.offset, SEEK_SET) ) {
+		printf("ERROR: Could not locate image data\n");
+		}
+
+		for (i=im->h.height-1; i >= 0; i--) {
+			int temp=0;
+			for (j=0; j < im->h.width; j++) {
+				temp=0;
+				fread(&temp, 1, bytes, fp);
+				im->c_data[i][j].r = im->c_index[temp].r;
+				im->c_data[i][j].g = im->c_index[temp].g;
+				im->c_data[i][j].b = im->c_index[temp].b;
+				}
+			fread(&temp, 1, pad, fp);
+			}
+		}
+	else {
+	/* Else the following procedure is to read 24 bit RGB data with no 
+	colour palette */
+		
+	if (fseek(fp, im->h.offset, SEEK_SET) ) {
+		printf("ERROR: Could not locate image data\n");
+		}
+
+		for (i=im->h.height-1; i >= 0; i--) {
+			unsigned char temp;
+			for (j=0; j < im->h.width; j++) {
+				fread(&im->c_data[i][j].r, 1, 1, fp);
+				fread(&im->c_data[i][j].g, 1, 1, fp);
+				fread(&im->c_data[i][j].b, 1, 1, fp);
+				}
+			fread(&temp, 1, pad, fp);
+			}
+		}
+
+	return 0;
+	}
+
+
+
+
+/* read_colour_palette: This function accepts an image structure and a file
+	pointer and then allocates and populates the colour palette. 
+	The file handle is assumed to point at the colour index */
+
+int read_colour_palette (image *im, FILE *fp) {
+
+	unsigned char trash;			// this is to hold the junk in colour palette
+	int i;
+
+	/* allocate the memory for colour palette */
+	im->c_index = (colour *) malloc (sizeof(colour) * im->h.num_c);
+	if (im->c_index == NULL) {
+
+		/* clean up if we are not able to prepare the index. No point in continuing 
+		because we will probably return wrong pixel data */
 		fclose(fp);
-		for (i=0; i < im->h.height; i++ )
-			free(im->data[i]);
-		free(im->data);
+		printf("ERROR: Could not create colour index\n");
 		return 1;
 		}
 
 
-
-	for (i=im->h.height-1; i >= 0; i--) {
-		for (j=0; j < im->h.width; j++) {
-			
-			int foo=0;
-			fread(&foo, im->h.bits/8, 1, fp);
-
-			/* If the image is indexed, find the appropriate intensity value.
-			otherwise, just set the pixel value to read value */
-			if (im->is_indexed == 1) {
-				im->data[i][j] = (float) im->c_index[foo].b;
-				}
-			else {
-				im->data[i][j] = (float) foo;
-				}
-			/* modify the values of min and max pixel value if necessary. This will
-			slow down the image reading, but this metadata will be useful for other
-			functions */
-			if (im->data[i][j] > im->max_val) {
-				im->max_val = im->data[i][j];
-				}
-			else if (im->data[i][j] < im->min_val) {
-				im->min_val = im->data[i][j];
-				}
-			}
+	/* Each colour is represented by 4 bytes, each representing blue, green and red
+	in that order followed by a 0x00. */
+	for (i=0; i < im->h.num_c; i++) {
+		fread(&im->c_index[i].b, 1, 1, fp);
+		fread(&im->c_index[i].g, 1, 1, fp);
+		fread(&im->c_index[i].r, 1, 1, fp);
+		fread(&trash, 1, 1, fp);
 		}
-	
-	/* done */
+
 	return 0;
 	}
+
+
+
+
+/* allocate_data_array: This function allocates the memory for pixel data. It allocates
+	float data if the image is not an RGB (!24_bit && !indexed). Otherwise it
+	allocates the colour vectors for each pixel. */
+
+int allocate_data_array (image *im) {
+
+	/* allocate memory for pixel data. This is pointer to pointers. Depending
+	on whether the image is RGB or Grey, we need to allocate float or colour vector */
+
+	if (im->is_rgb == 1)
+		im->c_data = (colour **) malloc (sizeof(colour *) * im->h.height );
+	else
+		im->g_data = (float **) malloc (sizeof(float *) * im->h.height );
+
+	if (im->g_data == NULL && im->c_data == NULL) {
+		printf("ERROR: Could not allocate memory for the image data\n");
+		return 1;
+		}
+
+	int i;
+	for (i=0; i < im->h.height; i++ ) { 
+		/* Using calloc here to initialize the pixels to 0. just in case
+		if there is some problem with header and we find less number of 
+		pixel data than we should */
+		int flag=0;
+		if (im->is_rgb == 1) {
+			im->c_data[i] = (colour *) malloc ( sizeof(colour) * im->h.width );
+			flag = im->c_data[i] == NULL ? 1 : 0 ;
+			}
+		else {
+			im->g_data[i] = (float *) calloc( im->h.width, sizeof(float) );
+			flag = im->c_data[i] == NULL ? 1 : 0 ;
+			}
+
+		if (flag == 1) {
+			printf("ERROR: Could not allocate memory for the image data row\n");
+			free(im->c_data);
+			free(im->g_data);
+			return 1;
+			}
+		}
+
+	return 0;
+	}
+
 
 
 /* read_header: This function takes a pointer to a bmp header structure and 
@@ -191,6 +343,10 @@ int read_header(header * h, FILE * fp) {
 
 void binarize(image * im,float t) {
 	int i,j;
+	if (im->is_rgb == 1) {
+		printf("ERROR: Image binarization should be done on greyscale images.\n");
+		return;
+		}
 
 	if (t > im->max_val) {
 		printf("WARNING: Threshold for binarization is greater than maximum pixel value\n\
@@ -204,7 +360,7 @@ void binarize(image * im,float t) {
 
 	for (i=0; i < im->h.height; i++) {
 		for (j=0; j < im->h.width; j++) {
-			im->data[i][j] = im->data[i][j] >= t ? 1.0 : 0.0;
+			im->g_data[i][j] = im->g_data[i][j] >= t ? 1.0 : 0.0;
 			}
 		}
 	}

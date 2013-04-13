@@ -55,7 +55,8 @@ typedef struct {
 	unsigned char r;
 	unsigned char g;
 	unsigned char b;
-	} index_ele;
+	} colour;
+	
 
 /* The structure for bmp image itself.
 	This structure has the double pointer to image pixel data. This is floating
@@ -71,11 +72,13 @@ typedef struct {
 	*/
 
 typedef struct {
-	float ** data;				// pixel data of the image
-	header h;					// bmp header structure
-	index_ele * c_index;		// pointer to the colour palette
-	int is_indexed;				// 'is the image indexed?' flag
-	float max_val, min_val;		// minimum and maximum value of pixels
+	float ** g_data;				// pixel data of greyscale image
+	colour ** c_data;				// pixel data of colour image
+	header h;						// bmp header structure
+	colour * c_index;				// pointer to the colour palette
+	int is_indexed;					// 'is the image indexed?' flag
+	int is_rgb;						// 'is the image rgb' flag
+	float max_val, min_val;			// minimum and maximum value of pixels
 	} image;
 
 
@@ -103,5 +106,50 @@ int read_header(header *, FILE *);
 void binarize(image *,float);
 
 
+/* read_pixels: This function takes an image structure and a file handle,
+	it then calls an appropriate function to read the pixel data according to
+	the nature of the image */
+
+int read_pixels (image *im, FILE *fp);
+
+/* read_grey_pixels: This function takes an image structure and a file pointer,
+	and reads the pixel data into the structure assuming that the image is NOT
+	indexed and is 8 bit encoded */
+
+int read_grey_pixels (image *im, FILE *fp);
+
+
+
+/* read_rgb_pixels: This function is to read rgb pixel data from the image. It 
+	accepts the file handle and the image structure and reads the rgb pixel
+	data
+
+	NOTE: We can handle 8 bit indexed image which can be greyscale (RGB having
+	same value) or coloured (RGB having different values in the palette). OR
+	we can handle 24 bit RGB image where each byte is R, G, and B.
+
+	WE DO NOT HANDLE 24 BIT INDEXED BMP IMAGES. I just think that should not happen.
+	there is no sense in having a colour palette if you have 24 bit encoding. This
+	kind of image will be simply read as an 24 but image ignoring the palette */
+
+
+
+int read_rgb_pixels(image *im,FILE *fp);
+
+
+
+
+/* read_colour_palette: This function accepts an image structure and a file
+	pointer and then allocates and populates the colour palette. 
+	The file handle is assumed to point at the colour index */
+
+int read_colour_palette (image *im, FILE *fp);
+
+
+/* allocate_data_array: This function allocates the memory for pixel data. It allocates
+	float data if the image is not an RGB (!24_bit && !indexed). Otherwise it
+	allocates the colour vectors for each pixel. */
+
+int allocate_data_array (image *im);
 
 #endif
