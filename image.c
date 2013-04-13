@@ -13,6 +13,10 @@ _______________________________________________________________________________*
 #include <string.h>
 #include "image.h"
 
+float luminosity (colour c);
+float lightness (colour c);
+float averaging (colour c);
+
 /* imread: This function takes a string and a pointer to image structure. 
 	It then opens the image named the string (assumes it is a bmp image) and 
 	populates the image structure with pixel data, bmp header and index of
@@ -364,3 +368,99 @@ void binarize(image * im,float t) {
 			}
 		}
 	}
+
+
+
+/* colour_to_grey: This function takes an RGB image and converts it to grey scale.
+	returns 1 on failure and 0 on success.
+	Conversion takes place according to one of the 3 methods
+	1. 'L': Luminosity- weighted averaging of the pixels. (default)
+	2. 'A': Averaging- Averaging of the pixels
+	3. 'I': lIghtness- Average of the min and max of the colours.
+
+	NOTE: Original image structure is altered. */
+
+int colour_to_grey (image *im, char method) {
+
+	if (im->is_rgb == 0) {
+		return 1;
+		}
+	
+	float (* convert)();
+
+	switch (method) {
+		case 'L': 	convert = luminosity;
+					break;
+		case 'A':	convert = averaging;
+					break;
+		case 'I':	convert = lightness;
+					break;
+	default:	convert = luminosity;
+					break;
+		}
+	
+	// first set the RGB flag to 0 and get a new memory allocated to the image data
+	im->is_rgb = 0;
+	allocate_data_array(im);
+
+	int i,j;
+	for (i=0; i < im->h.height; i++)
+		for (j=0; j < im->h.width; j++)
+			im->g_data[i][j] = convert(im->c_data[i][j]);
+	
+	/* If we are here, we can now safely deallocate the colour data */
+	for (i=0; i < im->h.height; i++)
+		free(im->c_data[i]);
+	free(im->c_data);
+
+	im->is_indexed=0;
+	return 0;
+	}
+
+
+
+
+float averaging (colour c) {
+	return ((float) (c.r + c.b + c.g)) / 3;
+	}
+
+
+
+float lightness (colour c) {
+	int max,min;
+	
+	max = (c.r > c.b) ? c.r : c.b;
+	max = (max > c.g) ? max : c.g;
+
+	min = (c.r < c.b) ? c.r : c.b;
+	min = (min < c.g) ? min : c.g;
+
+	return ((float) (max + min)) / 2;
+	}
+
+
+float luminosity (colour c) {
+	/* 0.21 R + 0.71 G + 0.07 B is the formula. This is because humans are
+	more sensitive to green colour */
+	return ((0.21 * c.r + 0.71 * c.b + 0.07 * c.g) / 3);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -152,4 +152,24 @@ int read_colour_palette (image *im, FILE *fp);
 
 int allocate_data_array (image *im);
 
+
+/* colour_to_grey: This function takes an RGB image and converts it to grey scale.
+	returns 1 on failure and 0 on success.
+	Conversion takes place according to one of the 3 methods
+	1. 'L': Luminosity- weighted averaging of the pixels. (default)
+	2. 'A': Averaging- Averaging of the pixels
+	3. 'I': lIghtness- Average of the min and max of the colours.
+
+	NOTE: Original image structure is altered. 
+		  Also, if the image is indexed image with all R, G and B values same
+		  (lame greyscale image) then you probably want to convert it using the
+		  averaging method ('A')*/
+
+int colour_to_grey (image *im, char method);
+
+
+
+
+
+
 #endif
