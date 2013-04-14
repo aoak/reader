@@ -512,6 +512,67 @@ void free_image (image * im) {
 
 
 
+/* calculate_cov: This function calculates the covariance matrix of the given image
+	data. Expects a greyscale image.
+	Returns pointer to the floating point cov matrix on success or NULL on failure */
+
+
+float ** calculate_cov (image *im) {
+
+	if (im->is_indexed == 1 || im->is_rgb == 1) {
+		fprintf(stderr,"ERROR: Expected input for covariance calculation is a greyscale image\n");
+		return NULL;
+		}
+	
+	int i,j,k;
+	int m=im->h.height;
+	int n=im->h.width;
+	float ** cov;
+	
+	cov = (float **) malloc (sizeof(float *) * n);
+	if (cov == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for covariance matrix failed\n");
+		return NULL;
+		}
+	
+	for (i=0; i < n; i++) {
+		cov[i] = (float *) malloc (sizeof(float) * n);
+		if (cov == NULL) {
+			fprintf(stderr,"ERROR: Allocating memory for covariance matrix failed\n");
+			return NULL;
+			}
+		}
+	
+	float mean[n];
+	float sum=0;
+	for (i=0; i < n; i++) {
+		for (j=0; j < m; j++)
+			sum += im->g_data[j][i];
+		mean[i] = sum / m;
+		sum = 0;
+		}
+			
+	for (i=0; i < n; i++)
+		for (j=0; j < n; j++) {
+			cov[i][j] = 0;
+			for (k=0; k < m; k++)
+				cov[i][j] += (im->g_data[k][i] - mean[i]) * (im->g_data[k][j] - mean[j]);
+			cov[i][j] /= (m-1);
+			}
+	return cov;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

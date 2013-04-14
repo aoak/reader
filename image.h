@@ -187,6 +187,12 @@ void free_image (image * );
 
 
 
+/* calculate_cov: This function calculates the covariance matrix of the given image
+	data. Expects a greyscale image.
+	Returns pointer to the floating point cov matrix on success or NULL on failure */
+
+
+float ** calculate_cov (image *);
 
 
 #endif
