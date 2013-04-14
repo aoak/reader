@@ -119,6 +119,8 @@ int read_grey_pixels (image *im, FILE *fp) {
 
 	
 	int i,j;
+	im->max_val=0;
+	im->min_val=255;
 	int bytes = im->h.bits/8;		// should be 1
 	unsigned char temp;
 	/* calculate the paddin in the image rows. bitmaps are rounded to be multiples of
@@ -132,14 +134,16 @@ int read_grey_pixels (image *im, FILE *fp) {
 
 	/* Now we have the header, and the colour palette, so now we can read the pixel data.
 	Set the pointer appropriately using the header information and then start reading */
-	if (fseek(fp, im->h.offset, SEEK_SET) ) {
+	if (fseek(fp, im->h.offset, SEEK_SET) )
 		fprintf(stderr,"ERROR: Could not locate image data\n");
-		}
+		
 
 	for (i=im->h.height-1; i >= 0; i--) {
 		for (j=0; j < im->h.width; j++) {
 			fread(&temp, 1, bytes, fp);
 			im->g_data[i][j] = (float) temp;
+			im->max_val = temp > im->max_val ? temp : im->max_val;
+			im->min_val = temp < im->min_val ? temp : im->min_val;
 			}
 		fread(&temp, 1, pad, fp);
 		}
@@ -388,6 +392,9 @@ int colour_to_grey (image *im, char method) {
 	
 	float (* convert)();
 
+	im->max_val = 0;
+	im->min_val = 255;
+
 	switch (method) {
 		case 'L': 	convert = luminosity;
 					break;
@@ -405,8 +412,12 @@ int colour_to_grey (image *im, char method) {
 
 	int i,j;
 	for (i=0; i < im->h.height; i++)
-		for (j=0; j < im->h.width; j++)
+		for (j=0; j < im->h.width; j++) {
 			im->g_data[i][j] = convert(im->c_data[i][j]);
+			im->max_val = im->g_data[i][j] > im->max_val ? im->g_data[i][j] : im->max_val;
+			im->min_val = im->g_data[i][j] < im->min_val ? im->g_data[i][j] : im->min_val;
+			}
+
 	
 	/* If we are here, we can now safely deallocate the colour data */
 	for (i=0; i < im->h.height; i++)
