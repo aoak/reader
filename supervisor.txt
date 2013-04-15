@@ -1,0 +1,10 @@
+za.bmp 0
+zb.bmp 1
+zc.bmp 2
+zd.bmp 3
+ze.bmp 4
+zf.bmp 5
+zg.bmp 6
+zh.bmp 7
+zi.bmp 8
+zk.bmp 9
