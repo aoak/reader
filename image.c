@@ -12,6 +12,7 @@ _______________________________________________________________________________*
 #include <stdlib.h>
 #include <string.h>
 #include "image.h"
+#include <errno.h>
 
 float luminosity (colour c);
 float lightness (colour c);
@@ -39,7 +40,7 @@ int imread (char * imname, image * im) {
 
 	fp = fopen(imname,"rb+");			// now open the image file
 	if (fp == NULL) {
-		fprintf(stderr,"ERROR: Reading the image file failed\n");
+		fprintf(stderr,"ERROR %d: Reading the image file: %s failed\n",errno,imname);
 		return 1;
 		}
 	
@@ -82,7 +83,7 @@ int imread (char * imname, image * im) {
 		return 1;
 		}
 
-	
+	fclose(fp);	
 	/* done */
 	return 0;
 	}

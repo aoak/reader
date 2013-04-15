@@ -17,6 +17,7 @@
 
 #define TRAINING_DATA 10
 #define MAX_NAME_LEN 20
+#define TRAINING_SESSIONS 1300
 
 void parse_supervisor_data(char * charnames[],int charresults[]);
 void train();
@@ -30,9 +31,9 @@ ann n;
 void main (int argc, char ** argv) {
 
 	int nnum[] = {30, 26};						// two layers, each having 30 and 26 neurons
-	int i;
+	int i,j;
 
-	initialize_ann(&n,0.018, 2, 46*46,nnum);
+	initialize_ann(&n,0.018, 2, 10*10,nnum);
 	train();
 //	print_ann(&n);
 
@@ -51,8 +52,11 @@ void main (int argc, char ** argv) {
 		binarize(&im,100);
 		get_image_vector(&im,n.in);
 		fwd_propogation (&n);
-		for (i=0; i < 26; i++ ) 
-			printf("%1d ", (int) n.outputs[1][i]);
+		for (i=0; i < 26; i++ ) {
+			j = (int) n.outputs[1][i];
+			if (j != 0)
+				printf("%1d ",i);
+			}
 		printf("\n");
 
 		free_image(&im);
@@ -70,7 +74,7 @@ void main (int argc, char ** argv) {
 
 void train () {
 	int i,j;
-	int max_sessions = 1000;
+	int max_sessions = TRAINING_SESSIONS;
 	char * charnames[TRAINING_DATA];
 	int charresults[TRAINING_DATA];
 	char *imname;
