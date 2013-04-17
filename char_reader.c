@@ -15,35 +15,45 @@
 #include "neural.h"
 
 
-#define TRAINING_DATA 10
+#define TRAINING_DATA 23
 #define MAX_NAME_LEN 20
-#define TRAINING_SESSIONS 1300
+#define TRAINING_SESSIONS 5000
 
 void parse_supervisor_data(char * charnames[],int charresults[]);
-void train();
+void train (char * charnames[],int charresults[]);
+void unit_test(char * charnames[],int charresults[]);
 
 
 image im;
 ann n;
 
 
-
 void main (int argc, char ** argv) {
 
 	int nnum[] = {30, 26};						// two layers, each having 30 and 26 neurons
 	int i,j;
+	char * charnames[TRAINING_DATA];
+	int charresults[TRAINING_DATA];
 
 	initialize_ann(&n,0.018, 2, 10*10,nnum);
-	train();
+
+	for (i=0; i < TRAINING_DATA; i++) {
+		charnames[i] = (char *) malloc (sizeof(char) * MAX_NAME_LEN);
+		if (charnames[i] == NULL) {
+			printf("Omg\n");
+			exit(0);
+			}
+		}
+	train(charnames,charresults);
+	unit_test(charnames,charresults);
 //	print_ann(&n);
 
-	
 
 	char testname[MAX_NAME_LEN] = {0};
 	char choice;
 	
-	do {
-		printf("Enter the image file name:\n");
+/*	do {
+		printf("Enter the image file name: ");
 		scanf("%s",testname);
 
 		printf("Reading image %s\n",testname);
@@ -65,27 +75,17 @@ void main (int argc, char ** argv) {
 		getc(stdin);
 		choice = getc(stdin);
 
-		} while ( choice == 'y' || choice == 'Y' );
+		} while ( choice == 'y' || choice == 'Y' );*/
 
 	}
 
 
 
 
-void train () {
+void train (char * charnames[],int charresults[]) {
 	int i,j;
 	int max_sessions = TRAINING_SESSIONS;
-	char * charnames[TRAINING_DATA];
-	int charresults[TRAINING_DATA];
 	char *imname;
-
-	for (i=0; i < TRAINING_DATA; i++) {
-		charnames[i] = (char *) malloc (sizeof(char) * MAX_NAME_LEN);
-		if (charnames[i] == NULL) {
-			printf("Omg\n");
-			exit(0);
-			}
-		}
 	
 	parse_supervisor_data(charnames,charresults);
 
@@ -133,6 +133,27 @@ void parse_supervisor_data(char * charnames[],int charresults[]) {
 
 
 
+void unit_test(char * charnames[],int charresults[]) {
+
+	char * imname;
+	int i,j;
+
+	printf("Starting unit tests\n");
+	for (i=0; i < TRAINING_DATA; i++) {
+		imname = charnames[i];
+		imread(imname, &im);
+		colour_to_grey(&im,'A');
+		binarize(&im,100);
+		get_image_vector(&im,n.in);
+		fwd_propogation (&n);
+		printf("Test image name: %s, expected result: %d, Actual result: ",imname,charresults[i]);
+		for (j=0; j < 26; j++ ) {
+			if ( ((int) n.outputs[1][j]) != 0)
+				printf("%1d ",j);
+			}
+		printf("\n");
+		}
+	}
 
 
 
