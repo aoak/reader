@@ -848,7 +848,12 @@ float * eig_val (float ** mat, int rows, int cols) {
 
 
 /* eig_vect_eig_val: This function takes a matrix and an eigen value of that
-	matrix. It then finds out the eigen vector corresponding that matrix */
+	matrix. It then finds out the eigen vector corresponding that matrix 
+	This is a big function (just like QR decomposition) because I have 
+	implemented solving of system of linear equations in this function
+	itself. Maybe on later day, it will be good to move all this matrix
+	functions to a new library having generic matrix functions. */
+
 
 
 float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
@@ -890,11 +895,6 @@ float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
 				r[i][j] = mat[i][j];
 
 
-	for (i=0; i < rows; i++) {
-		for (j=0; j < cols; j++)
-			printf("%f ",r[i][j]);
-		printf("\n");
-		}
 
 	for (i=0; i < cols; i++)
 		piv_cols[i] = -1;
@@ -951,12 +951,7 @@ float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
 		}
 	
 	/* Now we have the matrix in reduced form. Now we find the eigen vector */
-	printf("Number of pivots for this matrix = %d. Number of rows %d\n",num_pivots,rows);
-	for (i=0; i < rows; i++) {
-		for (j=0; j < cols; j++)
-			printf("%f ",r[i][j]);
-		printf("\n");
-		}
+//	printf("Number of pivots for this matrix = %d. Number of rows %d\n",num_pivots,rows);
 	
 	for (i=num_pivots-1; i >= 0; i--) {
 		float sum_free = 0;
@@ -965,22 +960,20 @@ float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
 			if (piv_cols[j] == 1) {
 				/* This means there is a pivot in this column */
 				vect[j] = (-sum_free)/r[i][j];
-				printf("vect[%d] = %f\n",j,vect[j]);
 				piv_cols[j] = -1;
 				break;
 				}
 			else {
 				/* This means this column is a free column */
 				sum_free += (r[i][j] * vect[j]);
-				printf("sum free = %f\n",sum_free);
 				}
 			}
 		}
 	
-	printf("Corresponding eigen vector:\n");
-	for (i=0; i < cols; i++)
-		printf("%f ",vect[i]);
-	printf("\n");
+
+	for (i=0; i < rows; i++)
+		free(r[i]);
+	free(r);
 	return vect;
 	}
 
@@ -988,4 +981,78 @@ float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
 
 
 
+/* eig_vect: This function takes a matrix and a vector of eigen values. It then
+    returns a matrix whose each column is eigen vector corresponding to that
+    particular position in eigen value vector */
 
+float ** eig_vect (float ** mat, int rows, int cols, float * eval, int len) {
+
+	int i,j;
+	float ** ev;
+
+	ev = (float **) malloc (sizeof(float *) * cols);
+	if (ev == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for eigen vector matrix failed\n");
+		return NULL;
+		}
+	
+	for (i=0; i < cols; i++) {
+		ev[i] = (float *) malloc (sizeof(float) * len);
+		if (ev[i] == NULL) {
+			fprintf(stderr,"ERROR: Allocating memory for eigen vector matrix failed\n");
+			return NULL;
+			}
+		}
+	
+	for (i=0; i < len; i++) {
+		float * e = eig_vect_eig_val(mat, rows, cols, eval[i]);
+		for (j=0; j < cols; j++)
+			ev[j][i] = e[j];
+		free(e);
+		}
+	
+	return ev;
+	}
+
+
+
+
+/* eig: This function takes a matrix and returns a eigen structure
+	of which the pointer at zeroth location is pointer to a vector
+	of eigen values. Pointer at location 1 is pointer to a matrix
+	whose columns are eigen vectors corresponding to the eigen value
+	at the same index in eigen value vector 
+	
+	NOTE: The pointer at the first location is a float ** but we actually
+	only need float *. As we are returning float ***, it is necessary that
+	each element is float **. Hence, while accessing the eigen value vector,
+	we have to add a dummy index and access the eigen values like 
+	eigen[0][0][i] to access ith eigen value. */
+
+float *** eig (float ** mat, int rows, int cols) {
+
+	float *** eigen;
+	eigen = (float ***) malloc (sizeof(float **) * 2);
+	if (eigen == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for eigen vector eigen value matrix failed\n");
+		return NULL;
+		}
+
+	eigen[0] = (float **) malloc (sizeof(float *) * 1);
+	if (eigen[0] == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for eigen vector-eigen value matrix failed\n");
+		return NULL;
+		}
+	eigen[0][0] = eig_val(mat, rows, cols);
+	if (eigen[0][0] == NULL)
+		return NULL;
+
+	int i;
+	for (i=0; i < cols; i++)
+		printf("%f\n",eigen[0][0][i]);
+	eigen[1] = eig_vect(mat, rows, cols, eigen[0][0], cols);
+	if (eigen[1] == NULL)
+		return NULL;
+
+	return eigen;
+	}

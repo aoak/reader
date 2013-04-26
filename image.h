@@ -243,4 +243,31 @@ float * eig_val (float **, int, int);
 float * eig_vect_eig_val (float **, int, int, float);
 
 
+
+
+/* eig_vect: This function takes a matrix and a vector of eigen values. It then
+	returns a matrix whose each column is eigen vector corresponding to that
+	particular position in eigen value vector */
+
+float ** eig_vect (float **, int, int, float *, int);
+
+
+
+
+/* eig: This function takes a matrix and returns a eigen structure
+	of which the pointer at zeroth location is pointer to a vector
+	of eigen values. Pointer at location 1 is pointer to a matrix
+	whose columns are eigen vectors corresponding to the eigen value
+	at the same index in eigen value vector
+
+    NOTE: The pointer at the first location is a float ** but we actually
+    only need float *. As we are returning float ***, it is necessary that
+    each element is float **. Hence, while accessing the eigen value vector,
+    we have to add a dummy index and access the eigen values like 
+    eigen[0][0][i] to access ith eigen value. */
+
+
+float *** eig (float **, int, int);
+
+
 #endif
