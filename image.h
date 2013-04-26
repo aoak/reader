@@ -195,4 +195,34 @@ void free_image (image * );
 float ** calculate_cov (image *);
 
 
+
+/* calculate_column_norm: This function takes a vector of floats and number of rows. 
+	It then calculates the norm of the given column by using formula 
+		norm = sqrt (sum (data[i] ^ 2)) */
+
+double calculate_column_norm (float *, int);
+
+
+
+/* qr_decomposition: This function takes a SQUARE matrix and decomposes
+	it into two matrices Q and R. A triple pointer is returned. This is
+	actually a pointer to two 2D matrices. 
+	The method used to calculate the decomposition is Gram–Schmidt process */
+
+float *** qr_decomposition (float **, int, int);
+
+
+/* project: This function takes two vectors and projects the second vector on
+    first and returns the projection vector */
+ 
+float * project (float *on, float *of, int len);
+
+
+
+
+
+
+
+
+
 #endif

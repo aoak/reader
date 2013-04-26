@@ -13,6 +13,7 @@ _______________________________________________________________________________*
 #include <string.h>
 #include "image.h"
 #include <errno.h>
+#include <math.h>
 
 float luminosity (colour c);
 float lightness (colour c);
@@ -570,11 +571,162 @@ float ** calculate_cov (image *im) {
 
 
 
+/* qr_decomposition: This function takes a SQUARE matrix and decomposes
+	it into two matrices Q and R. A triple pointer is returned. This is
+	actually a pointer to two 2D matrices. 
+	The method used to calculate the decomposition is Gram–Schmidt process */
+
+
+
+float *** qr_decomposition (float ** mat, int rows, int cols) {
+
+	printf("Calculating decomposition\n");
+	float ** q,** r;
+	int i, j, k;
+
+	float *** qr_mat = (float ***) malloc (sizeof(float **) * 2);
+	if (qr_mat == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for decomposition matrices failed\n");
+		return NULL;
+		}
+	
+	q = (float **) malloc (sizeof(float *) * rows);
+	r = (float **) malloc (sizeof(float *) * rows);
+	if (q == NULL || r == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for decompositing matrix failed\n");
+		return NULL;
+		}
+	
+	for (i=0; i < rows; i++) {
+		q[i] = (float *) malloc (sizeof(float) * cols);
+		r[i] = (float *) malloc (sizeof(float) * rows);
+		if (q[i] == NULL || r[i] == NULL) {
+			fprintf(stderr,"ERROR: Allocating memory for decomposition matrix failed\n");
+			return NULL;
+			}
+		}
+	
+	/* Set the matrix we are going to return */
+	qr_mat[0] = q;
+	qr_mat[1] = r;
+
+	/* Q is computed by dividing each column of the image matrix by its norm */
+	for (i=0; i < cols; i++) {
+
+		/* First I need a vector in which I can copy the column of original matrix */
+		float * of, *on;
+		of = (float *) malloc (sizeof(float) * rows);
+		on = (float *) malloc (sizeof(float) * rows);
+		if (of == NULL || on == NULL) {
+			fprintf(stderr,"ERROR: Calculating the projection failed. Out of memory\n");
+			return NULL;
+			}
+		if (i == 0) {
+			/* This case is easiest, just find the norm of this vector (column 0)
+			   and set first column of Q as vector divided by its norm */
+			for (j=0; j < rows; j++) 
+				of[j] = mat[j][i];
+			
+			double norm = calculate_column_norm(of, rows);
+			for (j=0; j < rows; j++)
+				q[j][i] = mat[j][i] / norm;
+			}
+		else {
+			/* else part is complecated. There are number of steps.
+			First we need the vector of which projections are to be calculated */
+			for (j=0; j < rows; j++) {
+				of[j] = mat[j][i];
+				q[j][i] = mat[j][i];
+				}
+
+			/* Now we need to calculate projection of this vector wrt each of the previous columns of
+			the Q matrix. (We have already divided the column with norm) */
+			for (k=0; k < i; k++) {
+				float * proj;
+				/* Copy the vector on which the current vector is to be projected */
+				for (j=0; j < rows; j++)
+					on[j] = q[j][k];
+
+				/* Get the projection */
+				proj = project(on,of,rows);
+				if (proj == NULL) {
+					fprintf(stderr,"ERROR: Calculating the projection failed.\n");
+					return NULL;
+					}
+
+				/* Subtract the projection from the original 'of' vector */
+				for (j=0; j < rows; j++) {
+					printf("%f - %f\n",q[j][i],proj[j]);
+					q[j][i] -= proj[j];
+					}
+				free(proj);
+				}
+			/* Now copy this current vector we are operating on, get its norm and
+			   divide the vector by its norm */
+			for (j=0; j < rows; j++)
+				of[j] = q[j][i];
+			double norm = calculate_column_norm(of, rows);
+			for (j=0; j < rows; j++) {
+				printf("%f / %lf\n",q[j][i],norm);
+				q[j][i] /= norm;
+				}
+			}
+		free(on);
+		free(of);
+		}
+
+	/* Now R is computed by formula Q_transpose * A */
+
+	for (i=0; i < rows; i++)
+		for (j=0; j < rows; j++) {
+			r[i][j] = 0;
+			for (k=0; k < rows; k++)
+				r[i][j] += (q[k][i] * mat[k][j]);
+			}
+	
+	return qr_mat;
+	}
 
 
 
 
+/* calculate_column_norm: This function takes a vector of floats and number of rows. 
+	It then calculates the norm of the given column by using formula 
+			norm = sqrt (sum (data[i] ^ 2)) */
+
+double calculate_column_norm (float * d, int r) {
+
+	long double norm = 0;
+	int i;
+
+	for (i=0; i < r; i++)
+		norm += pow(d[i],2);
+	
+	return sqrt(norm);
+	}
 
 
+/* project: This function takes two vectors and projects the second vector on
+	first and returns the projection vector */
 
+float * project (float *on, float *of, int len) {
 
+	float * p;
+	int i;
+
+	p = (float *) malloc (sizeof(float) * len);
+	if (p == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for projection vector failed.\n");
+		return NULL;
+		}
+
+	double num,den;
+	for (i=0; i < len; i++) {
+		num += on[i] * of[i];
+		den += pow(on[i],2);
+		}
+	for (i=0; i < len; i++)
+		p[i] = (num/den) * on[i];
+	
+	return p;
+	}
