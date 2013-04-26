@@ -237,6 +237,10 @@ float ** matrix_mult (float **, int, int, float **, int, int);
 float * eig_val (float **, int, int);
 
 
+/* eig_vect_eig_val: This function takes a matrix and an eigen value of that
+	matrix. It then finds out the eigen vector corresponding that matrix */
+
+float * eig_vect_eig_val (float **, int, int, float);
 
 
 #endif

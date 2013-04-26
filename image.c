@@ -759,8 +759,12 @@ float ** schur (float ** mat, int rows, int cols, int iterations) {
 
 
 	iterations--;
-	if (iterations > 0)
+	if (iterations > 0) {
 		schur_form = schur(rq, rows, cols, iterations); 
+		for (i=0; i < rows; i++)
+			free(rq[i]);
+		free(rq);
+		}
 	else 
 		schur_form = rq;
 
@@ -791,7 +795,7 @@ float ** matrix_mult (float ** a, int ra, int ca, float ** b, int rb, int cb) {
 	for (i=0; i < ra; i++) {
 		result[i] = (float *) malloc (sizeof(float) * cb);
 		if (result[i] == NULL) {
-			fprintf(stderr,"ERROR: Allocating memory for Schur decomposition failed\n");
+			fprintf(stderr,"ERROR: Allocating memory for multiplication result failed\n");
 			return NULL;
 			}
 		}
@@ -831,6 +835,10 @@ float * eig_val (float ** mat, int rows, int cols) {
 	for (i=0; i < rows; i++)
 		eval[i] = schur_form[i][i];
 
+	for (i=0; i < rows; i++)
+		free(schur_form[i]);
+	free(schur_form);
+
 	return eval;
 	}
 
@@ -839,8 +847,142 @@ float * eig_val (float ** mat, int rows, int cols) {
 
 
 
+/* eig_vect_eig_val: This function takes a matrix and an eigen value of that
+	matrix. It then finds out the eigen vector corresponding that matrix */
 
 
+float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
+
+	int i,j,k;
+	float ** r;
+	float * vect;
+	int piv_cols[cols], piv_rows[rows];
+
+	/* First try to allocate the memory for local copy of the matrix and the
+	   eigen vector. No point doing anything if that fails */
+
+	vect = (float *) malloc (sizeof(float) * cols);
+	if (vect == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for eigen vector failed\n");
+		return NULL;
+		}
+
+	r = (float **) malloc (sizeof(float *) * rows);
+	if (r == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for matrix reduction failed\n");
+		return NULL;
+		}
+	
+	for (i=0; i < rows; i++) {
+		r[i] = (float *) malloc (sizeof(float) * cols);
+		if (r[i] == NULL) {
+			fprintf(stderr,"ERROR: Allocating memory for matrix reduction failed\n");
+			return NULL;
+			}
+		}
+	
+	/* first prepare the matrix by doing (A - lamda I) */
+	for (i=0; i < rows; i++)
+		for (j=0; j < cols; j++)
+			if (i == j)
+				r[i][j] = mat[i][j] - eval;
+			else
+				r[i][j] = mat[i][j];
+
+
+	for (i=0; i < rows; i++) {
+		for (j=0; j < cols; j++)
+			printf("%f ",r[i][j]);
+		printf("\n");
+		}
+
+	for (i=0; i < cols; i++)
+		piv_cols[i] = -1;
+	int num_pivots=0;
+
+	for (i=0; i < cols && num_pivots < rows; i++) {
+		/* If the element under consideration is 0, then we need to try and find
+		   and different pivot for us */
+		if (r[num_pivots][i] == 0) {
+			/* Our potential pivot turned out to be a 0. So lets try to do a
+			   row swap to get out of this situation */
+			for (j=num_pivots+1; j < rows; j++) {
+				if (r[j][i] != 0)
+					break;			// found a non zero potential pivot
+				}
+			/* If j is equal to rows, that means there is no non zero hero
+			   below our potential pivot zero. Nothing we can do about it.
+			   just skip this column. This will be a free variable. set it to 1 */
+			if (j == rows) {
+				vect[i] = 1;
+				continue;
+				}
+
+			/* row swap using a temp variable. Just like in high school ;) */
+			float temp;
+			for (k=0; k < cols; k++) {
+				temp = r[num_pivots][k];
+				r[num_pivots][k] = r[j][k];
+				r[j][k] = temp;
+				}
+			}
+
+		/* If we are here means we got a good pivot, or we got away with row swapping.
+			anyway, we can proceed now to eliminate all the elements below our pivot */
+		float pivot = r[num_pivots][i];
+		piv_cols[i] = 1;
+
+		for (j=i+1; j < rows; j++) {
+			float d = r[j][i] / pivot;
+			for (k=0; k < cols; k++)
+				r[j][k] -= d * r[num_pivots][k];
+			}
+
+		/* After this step, We should iterate over the entire matrix and those elements which
+		are almost zero, lets make them 0 */
+		for (k=0; k < rows; k++) {
+			for (j=0; j < cols; j++) {
+				if ((int) (r[k][j] * 10) == 0)
+					r[k][j] = 0;
+				}
+			}
+
+		num_pivots++;
+		}
+	
+	/* Now we have the matrix in reduced form. Now we find the eigen vector */
+	printf("Number of pivots for this matrix = %d. Number of rows %d\n",num_pivots,rows);
+	for (i=0; i < rows; i++) {
+		for (j=0; j < cols; j++)
+			printf("%f ",r[i][j]);
+		printf("\n");
+		}
+	
+	for (i=num_pivots-1; i >= 0; i--) {
+		float sum_free = 0;
+		for (j=cols-1; j >= 0; j--) {
+			/* The last pivot we encountered will be in row num_pivots-1 */
+			if (piv_cols[j] == 1) {
+				/* This means there is a pivot in this column */
+				vect[j] = (-sum_free)/r[i][j];
+				printf("vect[%d] = %f\n",j,vect[j]);
+				piv_cols[j] = -1;
+				break;
+				}
+			else {
+				/* This means this column is a free column */
+				sum_free += (r[i][j] * vect[j]);
+				printf("sum free = %f\n",sum_free);
+				}
+			}
+		}
+	
+	printf("Corresponding eigen vector:\n");
+	for (i=0; i < cols; i++)
+		printf("%f ",vect[i]);
+	printf("\n");
+	return vect;
+	}
 
 
 
