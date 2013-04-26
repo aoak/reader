@@ -212,15 +212,29 @@ double calculate_column_norm (float *, int);
 float *** qr_decomposition (float **, int, int);
 
 
-/* project: This function takes two vectors and projects the second vector on
+/* project_vector: This function takes two vectors and projects the second vector on
     first and returns the projection vector */
  
-float * project (float *on, float *of, int len);
+float * project_vector (float *, float *, int);
+
+
+/* schur: This function takes a matrix and number of iterations and returns the 
+	matrix' Schur form. Number of iterations refer to the QR algorithm iterations */
+
+float ** schur (float **, int, int, int);
 
 
 
+/* matrix_mult: Simple matrix multiplication */
+
+float ** matrix_mult (float **, int, int, float **, int, int);
 
 
+/* eig_val: This function takes a matrix and computes its eigen values using
+	QR algorithm. Returns a vector of eigen values which are digonal of the
+	Schur form of input matrix after 50 iterations of QR algorithm */
+
+float * eig_val (float **, int, int);
 
 
 

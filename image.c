@@ -580,7 +580,6 @@ float ** calculate_cov (image *im) {
 
 float *** qr_decomposition (float ** mat, int rows, int cols) {
 
-	printf("Calculating decomposition\n");
 	float ** q,** r;
 	int i, j, k;
 
@@ -648,17 +647,16 @@ float *** qr_decomposition (float ** mat, int rows, int cols) {
 					on[j] = q[j][k];
 
 				/* Get the projection */
-				proj = project(on,of,rows);
+				proj = project_vector(on,of,rows);
 				if (proj == NULL) {
 					fprintf(stderr,"ERROR: Calculating the projection failed.\n");
 					return NULL;
 					}
 
 				/* Subtract the projection from the original 'of' vector */
-				for (j=0; j < rows; j++) {
-					printf("%f - %f\n",q[j][i],proj[j]);
+				for (j=0; j < rows; j++)
 					q[j][i] -= proj[j];
-					}
+					
 				free(proj);
 				}
 			/* Now copy this current vector we are operating on, get its norm and
@@ -666,10 +664,8 @@ float *** qr_decomposition (float ** mat, int rows, int cols) {
 			for (j=0; j < rows; j++)
 				of[j] = q[j][i];
 			double norm = calculate_column_norm(of, rows);
-			for (j=0; j < rows; j++) {
-				printf("%f / %lf\n",q[j][i],norm);
+			for (j=0; j < rows; j++) 
 				q[j][i] /= norm;
-				}
 			}
 		free(on);
 		free(of);
@@ -706,10 +702,10 @@ double calculate_column_norm (float * d, int r) {
 	}
 
 
-/* project: This function takes two vectors and projects the second vector on
+/* project_vector: This function takes two vectors and projects the second vector on
 	first and returns the projection vector */
 
-float * project (float *on, float *of, int len) {
+float * project_vector (float *on, float *of, int len) {
 
 	float * p;
 	int i;
@@ -725,8 +721,129 @@ float * project (float *on, float *of, int len) {
 		num += on[i] * of[i];
 		den += pow(on[i],2);
 		}
-	for (i=0; i < len; i++)
+	for (i=0; i < len; i++) 
 		p[i] = (num/den) * on[i];
 	
 	return p;
 	}
+
+
+
+
+
+/* schur: This function takes a matrix and number of iterations and returns the 
+    matrix' Schur form. Number of iterations refer to the QR algorithm iterations */
+
+float ** schur (float ** mat, int rows, int cols, int iterations) {
+	
+	float *** qr_mat;
+	float ** schur_form, ** rq;
+	int i,j;
+
+	qr_mat = qr_decomposition(mat,rows,cols);
+	if (qr_mat == NULL) {
+		fprintf(stderr,"ERROR: QR decomposition failed when %d iterations remaining.\n",iterations);
+		return NULL;
+		}
+	
+	rq = matrix_mult(qr_mat[1], rows, cols, qr_mat[0], rows, cols);
+
+	/* Now free the qr_mat which is a float *** */
+	for (i=0; i < 2; i++) {
+		for (j=0; j < rows; j++)
+			free(qr_mat[i][j]);
+		free(qr_mat[i]);
+		}
+	free(qr_mat);
+
+
+
+	iterations--;
+	if (iterations > 0)
+		schur_form = schur(rq, rows, cols, iterations); 
+	else 
+		schur_form = rq;
+
+	return schur_form;
+	}
+
+
+
+/* matrix_mult: Simple matrix multiplication */
+
+
+float ** matrix_mult (float ** a, int ra, int ca, float ** b, int rb, int cb) {
+
+	float ** result;
+	int i, j, k;
+
+	if (ca != rb) {
+		fprintf(stderr,"Matrix dimentions do not agree for multiplication");
+		return NULL;
+		}
+
+	result = (float **) malloc (sizeof(float *) * ra);
+	if (result == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for multiplication result failed\n");
+		return NULL;
+		}
+	
+	for (i=0; i < ra; i++) {
+		result[i] = (float *) malloc (sizeof(float) * cb);
+		if (result[i] == NULL) {
+			fprintf(stderr,"ERROR: Allocating memory for Schur decomposition failed\n");
+			return NULL;
+			}
+		}
+	
+	for (i=0; i < ra; i++)
+		for (j=0; j < cb; j++) {
+			result[i][j] = 0;
+			for (k=0; k < ca; k++)
+				result[i][j] += a[i][k] * b[k][j];
+			}
+	
+	return result;
+	}
+
+
+
+
+
+
+
+/* eig_val: This function takes a matrix and computes its eigen values using
+	QR algorithm. Returns a vector of eigen values which are digonal of the
+	Schur form of input matrix after 50 iterations of QR algorithm */
+
+float * eig_val (float ** mat, int rows, int cols) {
+	
+	int i;
+	float * eval;
+	eval = (float *) malloc (sizeof(float) * rows);
+	if (eval == NULL) {
+		fprintf(stderr,"ERROR: Allocating memory for eigen value vector failed.\n");
+		return NULL;
+		}
+
+	float ** schur_form = schur(mat, rows, cols, 50);
+
+	for (i=0; i < rows; i++)
+		eval[i] = schur_form[i][i];
+
+	return eval;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
