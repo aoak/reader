@@ -15,9 +15,9 @@
 #include "neural.h"
 
 
-#define TRAINING_DATA 23
+#define TRAINING_DATA 46
 #define MAX_NAME_LEN 20
-#define TRAINING_SESSIONS 5000
+#define TRAINING_SESSIONS 7000
 
 void parse_supervisor_data(char * charnames[],int charresults[]);
 void train (char * charnames[],int charresults[]);
@@ -35,7 +35,7 @@ void main (int argc, char ** argv) {
 	char * charnames[TRAINING_DATA];
 	int charresults[TRAINING_DATA];
 
-	initialize_ann(&n,0.018, 2, 10*10,nnum);
+	initialize_ann(&n,0.018, 2, 46*46,nnum);
 
 	for (i=0; i < TRAINING_DATA; i++) {
 		charnames[i] = (char *) malloc (sizeof(char) * MAX_NAME_LEN);
@@ -49,10 +49,10 @@ void main (int argc, char ** argv) {
 //	print_ann(&n);
 
 
-	char testname[MAX_NAME_LEN] = {0};
+/*	char testname[MAX_NAME_LEN] = {0};
 	char choice;
 	
-/*	do {
+	do {
 		printf("Enter the image file name: ");
 		scanf("%s",testname);
 
@@ -98,7 +98,7 @@ void train (char * charnames[],int charresults[]) {
 		imname = charnames[x];
 		imread(imname, &im);
 		colour_to_grey(&im,'A');
-		binarize(&im,100);
+		binarize(&im,120);
 		get_image_vector(&im,n.in);
 		fwd_propogation (&n);
 		err_backpropogation (&n);
@@ -143,7 +143,7 @@ void unit_test(char * charnames[],int charresults[]) {
 		imname = charnames[i];
 		imread(imname, &im);
 		colour_to_grey(&im,'A');
-		binarize(&im,100);
+		binarize(&im,120);
 		get_image_vector(&im,n.in);
 		fwd_propogation (&n);
 		printf("Test image name: %s, expected result: %d, Actual result: ",imname,charresults[i]);
