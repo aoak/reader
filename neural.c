@@ -190,14 +190,10 @@ int perceptron_update_output (neuron *n,float *in) {
                 return 0;
                 }
 
-	/* output of a perceptron with a STEP activation function is given by
-	   weighted sum of inputs compared with the bias. */
-
 	for (i = 0; i < n->num_in; i++) {
 		sigma_wx += n->weights[i] * in[i];
 	}
 
-//	n->output = (sigma_wx >= n->bias);
 	n->output = n->act(sigma_wx + n->bias_wt);
 	
 	return 1;
