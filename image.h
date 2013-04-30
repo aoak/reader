@@ -195,6 +195,21 @@ void free_image (image * );
 float ** calculate_cov (image *);
 
 
+/* principal_components: This function takes an image structure and returns a triple
+    float pointer of which the first is pointer to a eigen value vector and the second
+	is the pointer to the matrix whose columns are eigen vectors of the image and hence
+	the principal components of the image.
+
+	NOTE: The first pointer is a float ** (2D) pointer whose first dimention is of length 1.
+	This is because we need a pointer to a vector (float * - 1D) but the matrix returned
+	is a of float ** pointers, hence we had to add this dummy dimention. 
+	The eigen values should be accessed like:
+			matrix[0][0][i] to access ith eigen value. */
+
+
+
+float *** principal_components (image * im);
+
 
 /* calculate_column_norm: This function takes a vector of floats and number of rows. 
 	It then calculates the norm of the given column by using formula 

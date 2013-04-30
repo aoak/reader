@@ -558,11 +558,46 @@ float ** calculate_cov (image *im) {
 		for (j=0; j < n; j++) {
 			cov[i][j] = 0;
 			for (k=0; k < m; k++)
-				cov[i][j] += (im->g_data[k][i] - mean[i]) * (im->g_data[k][j] - mean[j]);
-			cov[i][j] /= (m-1);
+				//cov[i][j] += (im->g_data[k][i] - mean[i]) * (im->g_data[k][j] - mean[j]);
+				cov[i][j] += (im->g_data[i][k] - mean[k]) * (im->g_data[j][k] - mean[k]);
+			cov[i][j] /= (m);
+			//cov[i][j] /= (m-1);
 			}
 	return cov;
 	}
+
+
+
+
+
+/* principal_components: This function takes an image structure and returns a triple
+	float pointer of which the first is pointer to a eigen value vector and the second
+	is the pointer to the matrix whose columns are eigen vectors of the image and hence
+	the principal components of the image.
+
+	NOTE: The first pointer is a float ** (2D) pointer whose first dimention is of length 1.
+		This is because we need a pointer to a vector (float * - 1D) but the matrix returned
+		is a of float ** pointers, hence we had to add this dummy dimention. 
+		The eigen values should be accessed like:
+			matrix[0][0][i] to access ith eigen value. */
+
+
+
+float *** principal_components (image * im) {
+	
+	float ** cov;
+	cov = calculate_cov(im);
+	if (cov == NULL) {
+		fprintf(stderr,"ERROR: Calculating covariance matrix of the image failed.\n");
+		return NULL;
+		}
+	
+	return eig(cov, im->h.width, im->h.width);
+	}
+
+
+
+
 
 
 
@@ -832,6 +867,7 @@ float * eig_val (float ** mat, int rows, int cols) {
 
 	float ** schur_form = schur(mat, rows, cols, 50);
 
+
 	for (i=0; i < rows; i++)
 		eval[i] = schur_form[i][i];
 
@@ -894,8 +930,7 @@ float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
 			else
 				r[i][j] = mat[i][j];
 
-
-
+	
 	for (i=0; i < cols; i++)
 		piv_cols[i] = -1;
 	int num_pivots=0;
@@ -951,7 +986,7 @@ float * eig_vect_eig_val (float ** mat, int rows, int cols, float eval) {
 		}
 	
 	/* Now we have the matrix in reduced form. Now we find the eigen vector */
-//	printf("Number of pivots for this matrix = %d. Number of rows %d\n",num_pivots,rows);
+	// printf("Number of pivots for this matrix = %d. Number of rows %d\n",num_pivots,rows);
 	
 	for (i=num_pivots-1; i >= 0; i--) {
 		float sum_free = 0;
@@ -1047,9 +1082,6 @@ float *** eig (float ** mat, int rows, int cols) {
 	if (eigen[0][0] == NULL)
 		return NULL;
 
-	int i;
-	for (i=0; i < cols; i++)
-		printf("%f\n",eigen[0][0][i]);
 	eigen[1] = eig_vect(mat, rows, cols, eigen[0][0], cols);
 	if (eigen[1] == NULL)
 		return NULL;

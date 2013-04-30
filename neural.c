@@ -273,7 +273,7 @@ int initialize_ann (ann *net, float e, int layers, int inputs, int *n) {
 
 	/* as a precaution, set extra pointers to null */
 	for (i = layers; i < MAXLAYERS; i++) {
-		printf("initializing extra slot %d\n",i+1);
+//		printf("initializing extra slot %d\n",i+1);
 		net->outputs[i] = NULL;
 		net->layers[i] = NULL;
 		net->num_neurons[i] = 0;

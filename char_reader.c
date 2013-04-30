@@ -17,7 +17,7 @@
 
 #define TRAINING_DATA 52
 #define MAX_NAME_LEN 20
-#define TRAINING_SESSIONS 500
+#define TRAINING_SESSIONS 300
 #define TEST_DATA 24
 
 void parse_supervisor_data(char * charnames[],int charresults[]);
@@ -48,8 +48,7 @@ void main (int argc, char ** argv) {
 		}
 	train(charnames,charresults);
 	unit_test(charnames,charresults);
-	printf("--------------------------------------------------------\n");
-	test();
+//	test();
 //	print_ann(&n);
 
 
@@ -68,7 +67,7 @@ void main (int argc, char ** argv) {
 		printf("Reading image %s\n",testname);
 		imread(testname,&im);
 		colour_to_grey(&im,'A');
-		binarize(&im,100);
+		binarize(&im,120);
 		get_image_vector(&im,n.in);
 		fwd_propogation (&n);
 		for (i=0; i < 26; i++ ) {
@@ -96,10 +95,12 @@ void train (char * charnames[],int charresults[]) {
 	int i,j,k;
 	int max_sessions = TRAINING_SESSIONS;
 	char *imname;
+	int err = 0;
 	
 	parse_supervisor_data(charnames,charresults);
 
 	for (i=0; i < max_sessions; i++) {
+		err=0;
 		for (k=0; k < TRAINING_DATA; k++) {
 			for (j=0; j < 26; j++) 
 				n.ex_output[j] = 0;
@@ -111,11 +112,14 @@ void train (char * charnames[],int charresults[]) {
 			binarize(&im,120);
 			get_image_vector(&im,n.in);
 			fwd_propogation (&n);
+			for (j=0; j < 26; j++) {
+				if (n.outputs[1][j] != n.ex_output[j])
+					err++;
+				}
 			err_backpropogation (&n);
 			free_image(&im);
 			}
-				
-		int x= i % TRAINING_DATA;
+//		printf("session %d: error %d\n",i,err);		
 		}
 	}
 
@@ -132,6 +136,7 @@ void parse_supervisor_data(char * charnames[],int charresults[]) {
 	fp = fopen(filename,"r");
 	if (fp == NULL) {
 		printf("Error opening %s\n",filename);
+		printf("File %s needs to be present in the current directory with the details of training samples and expected outputs\n",filename);
 		exit(0);
 		}
 	
@@ -190,7 +195,7 @@ void test () {
 		fscanf(fp,"%s\n",testname);
 		imread(testname,&im);
 		colour_to_grey(&im,'A');
-		binarize(&im,100);
+		binarize(&im,120);
 		get_image_vector(&im,n.in);
 		fwd_propogation (&n);
 		printf("Test image name: %s, Actual result: ",testname);
