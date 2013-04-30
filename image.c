@@ -558,7 +558,6 @@ float ** calculate_cov (image *im) {
 		for (j=0; j < n; j++) {
 			cov[i][j] = 0;
 			for (k=0; k < m; k++)
-				//cov[i][j] += (im->g_data[k][i] - mean[i]) * (im->g_data[k][j] - mean[j]);
 				cov[i][j] += (im->g_data[i][k] - mean[k]) * (im->g_data[j][k] - mean[k]);
 			cov[i][j] /= (m);
 			//cov[i][j] /= (m-1);
