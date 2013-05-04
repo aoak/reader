@@ -17,7 +17,7 @@
 
 #define TRAINING_DATA 52
 #define MAX_NAME_LEN 20
-#define TRAINING_SESSIONS 300
+#define TRAINING_SESSIONS 320
 #define TEST_DATA 24
 
 void parse_supervisor_data(char * charnames[],int charresults[]);
@@ -37,7 +37,7 @@ void main (int argc, char ** argv) {
 	char * charnames[TRAINING_DATA];
 	int charresults[TRAINING_DATA];
 
-	initialize_ann(&n,0.018, 2, 46*46,nnum);
+	initialize_ann(&n,0.005, 2, 46*46,nnum);
 
 	for (i=0; i < TRAINING_DATA; i++) {
 		charnames[i] = (char *) malloc (sizeof(char) * MAX_NAME_LEN);
@@ -51,6 +51,7 @@ void main (int argc, char ** argv) {
 //	test();
 //	print_ann(&n);
 
+return;
 
 	char testname[MAX_NAME_LEN] = {0};
 	char choice;
@@ -119,7 +120,7 @@ void train (char * charnames[],int charresults[]) {
 			err_backpropogation (&n);
 			free_image(&im);
 			}
-//		printf("session %d: error %d\n",i,err);		
+		printf("session %d: error %d\n",i,err);		
 		}
 	}
 
